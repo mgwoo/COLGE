@@ -58,12 +58,10 @@ class S2V_QN_1(torch.nn.Module):
 
             else:
                 mu_1 = torch.matmul(xv, self.mu_1).clamp(0)
-                #mu_1.transpose_(1,2)
                 # before pooling:
                 for i in range(self.len_pre_pooling):
                     mu = self.list_pre_pooling[i](mu).clamp(0)
 
-                #print("mu.shape:", mu.shape)
                 # mu_pool = torch.matmul(adj, mu)
                 mu_pool = torch.stack([adj[i].mm(mu[i]) for i in range(minibatch_size)])
 
@@ -73,7 +71,6 @@ class S2V_QN_1(torch.nn.Module):
 
                 mu_2 = self.mu_2(mu_pool)
 
-                # print("mu_1:", mu_1.shape, "mu_2:", mu_2.shape)
                 mu = torch.add(mu_1, mu_2).clamp(0)
 
         q_1 = self.q_1(torch.matmul(xv.transpose(1,2),mu)).expand(minibatch_size,nbr_node,self.embed_dim)

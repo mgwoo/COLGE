@@ -23,28 +23,15 @@ environment.
 """
 
 def getSparseTensor(cur_graph):
-    adj_tens = cur_graph.adj().todense()
-    # print("adj_tens:", adj_tens)
-    
-    nz_list = np.nonzero(adj_tens)
-    nz_indices = np.array((nz_list[0], nz_list[1]))
+    nz_list = np.nonzero(cur_graph.adj())
+    nz_indices = torch.from_numpy(np.array((nz_list[0], nz_list[1]), dtype=np.int64))
 
-    nz_indices = torch.from_numpy(nz_indices)
     nz_vals = torch.from_numpy(np.ones(len(nz_list[0]), dtype=np.float32))
 
-    # print("nz_indices:", nz_indices)
-    # print("nz_vals:", nz_vals)
-        
     adj_tens = torch.sparse.FloatTensor(nz_indices, nz_vals, \
         torch.Size([cur_graph.number_of_nodes(), cur_graph.number_of_nodes()]))
 
-    # print("adj_tens type: ", adj_tens.type())
-    # print("adj_tens.size:", adj_tens.shape)
-
     return adj_tens
-
-
-
 
 class DQAgent:
 
@@ -123,11 +110,6 @@ class DQAgent:
 
 
         self.nodes = self.graphs[self.games].nodes()
-
-        #self.adj = self.graphs[self.games].adj()
-        #self.adj = self.adj.todense()
-        #self.adj = torch.from_numpy(np.expand_dims(self.adj.astype(int), axis=0))
-        #self.adj = self.adj.type(torch.sparse.FloatTensor)
         self.adj = torch.stack([getSparseTensor(self.graphs[self.games])])
 
         self.last_action = 0
