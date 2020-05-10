@@ -22,6 +22,27 @@ Contains the definition of the agent that will run in an
 environment.
 """
 
+def getSparseTensor(cur_graph):
+    adj_tens = cur_graph.adj().todense()
+    # print("adj_tens:", adj_tens)
+    
+    nz_list = np.nonzero(adj_tens)
+    nz_indices = np.array((nz_list[0], nz_list[1]))
+
+    nz_indices = torch.from_numpy(nz_indices)
+    nz_vals = torch.from_numpy(np.ones(len(nz_list[0]), dtype=np.float32))
+
+    # print("nz_indices:", nz_indices)
+    # print("nz_vals:", nz_vals)
+        
+    adj_tens = torch.sparse.FloatTensor(nz_indices, nz_vals, \
+        torch.Size([cur_graph.number_of_nodes(), cur_graph.number_of_nodes()]))
+
+    # print("adj_tens type: ", adj_tens.type())
+    # print("adj_tens.size:", adj_tens.shape)
+
+    return adj_tens
+
 
 
 
@@ -102,10 +123,12 @@ class DQAgent:
 
 
         self.nodes = self.graphs[self.games].nodes()
-        self.adj = self.graphs[self.games].adj()
-        self.adj = self.adj.todense()
-        self.adj = torch.from_numpy(np.expand_dims(self.adj.astype(int), axis=0))
-        self.adj = self.adj.type(torch.sparse.FloatTensor)
+
+        #self.adj = self.graphs[self.games].adj()
+        #self.adj = self.adj.todense()
+        #self.adj = torch.from_numpy(np.expand_dims(self.adj.astype(int), axis=0))
+        #self.adj = self.adj.type(torch.sparse.FloatTensor)
+        self.adj = torch.stack([getSparseTensor(self.graphs[self.games])])
 
         self.last_action = 0
         self.last_observation = torch.zeros(1, self.nodes, 1, dtype=torch.float)
@@ -173,9 +196,9 @@ class DQAgent:
         reward_tens = torch.Tensor([[minibatch[0][2]]])
         observation_tens = minibatch[0][3]
         done_tens =torch.Tensor([[minibatch[0][4]]])
-        adj_tens = self.graphs[minibatch[0][5]].adj().todense()
-        adj_tens = torch.from_numpy(np.expand_dims(adj_tens.astype(int), axis=0)).type(torch.sparse.FloatTensor)
 
+        cur_graph = self.graphs[minibatch[0][5]]
+        adj_tens = torch.stack([getSparseTensor(cur_graph)])
 
         for last_observation_, action_, reward_, observation_, done_, games_ in minibatch[-self.minibatch_length + 1:]:
             last_observation_tens=torch.cat((last_observation_tens,last_observation_))
@@ -183,9 +206,14 @@ class DQAgent:
             reward_tens = torch.cat((reward_tens, torch.Tensor([[reward_]])))
             observation_tens = torch.cat((observation_tens, observation_))
             done_tens = torch.cat((done_tens,torch.Tensor([[done_]])))
-            adj_ = self.graphs[games_].adj().todense()
-            adj = torch.from_numpy(np.expand_dims(adj_.astype(int), axis=0)).type(torch.sparse.FloatTensor)
+
+            cur_graph = self.graphs[games_]
+            adj = torch.stack([getSparseTensor(cur_graph)])
+            #adj_ = self.graphs[games_].adj().todense()
+            #adj = torch.from_numpy(np.expand_dims(adj_.astype(int), axis=0)).type(torch.sparse.FloatTensor)
             adj_tens = torch.cat((adj_tens, adj))
+
+        # print("final adj_tens shape:", adj_tens.shape)
 
         return (last_observation_tens, action_tens, reward_tens, observation_tens,done_tens, adj_tens)
 

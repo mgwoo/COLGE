@@ -48,3 +48,6 @@ class Graph:
     def adj(self):
 
         return nx.adjacency_matrix(self.g)
+
+    def number_of_nodes(self):
+        return nx.number_of_nodes(self.g)

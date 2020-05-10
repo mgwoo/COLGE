@@ -44,10 +44,9 @@ class S2V_QN_1(torch.nn.Module):
         torch.nn.init.normal_(self.q.weight, mean=0, std=0.01)
 
     def forward(self, xv, adj):
-
         minibatch_size = xv.shape[0]
         nbr_node = xv.shape[1]
-
+        # print("adj shape:", adj.shape)
 
         for t in range(self.T):
             if t == 0:
@@ -58,20 +57,23 @@ class S2V_QN_1(torch.nn.Module):
                 #mu = torch.add(mu_1, mu_2).clamp(0)
 
             else:
-                #mu_1 = self.mu_1(xv).clamp(0)
                 mu_1 = torch.matmul(xv, self.mu_1).clamp(0)
                 #mu_1.transpose_(1,2)
                 # before pooling:
                 for i in range(self.len_pre_pooling):
                     mu = self.list_pre_pooling[i](mu).clamp(0)
 
-                mu_pool = torch.matmul(adj, mu)
+                #print("mu.shape:", mu.shape)
+                # mu_pool = torch.matmul(adj, mu)
+                mu_pool = torch.stack([adj[i].mm(mu[i]) for i in range(minibatch_size)])
 
                 # after pooling
                 for i in range(self.len_post_pooling):
                     mu_pool = self.list_post_pooling[i](mu_pool).clamp(0)
 
                 mu_2 = self.mu_2(mu_pool)
+
+                # print("mu_1:", mu_1.shape, "mu_2:", mu_2.shape)
                 mu = torch.add(mu_1, mu_2).clamp(0)
 
         q_1 = self.q_1(torch.matmul(xv.transpose(1,2),mu)).expand(minibatch_size,nbr_node,self.embed_dim)
@@ -124,7 +126,6 @@ class S2V_QN_2(torch.nn.Module):
         torch.nn.init.normal_(self.q, mean=0, std=0.01)
 
     def forward(self, xv, adj):
-
 
         for t in range(self.T):
             if t == 0:
