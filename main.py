@@ -25,7 +25,6 @@ parser = argparse.ArgumentParser(description='RL running machine')
 parser.add_argument('--environment_name', metavar='ENV_CLASS', type=str, default='MVC', help='Class to use for the environment. Must be in the \'environment\' module')
 parser.add_argument('--agent', metavar='AGENT_CLASS', default='Agent', type=str, help='Class to use for the agent. Must be in the \'agent\' module.')
 parser.add_argument('--graph_type',metavar='GRAPH', default='erdos_renyi',help ='Type of graph to optimize')
-parser.add_argument('--graph_nbr', type=int, default='1000', help='number of differente graph to generate for the training sample')
 parser.add_argument('--model', type=str, default='S2V_QN_1', help='model name')
 parser.add_argument('--ngames', type=int, metavar='n', default='500', help='number of games to simulate')
 parser.add_argument('--niter', type=int, metavar='n', default='1000', help='max number of iterations per game')
@@ -46,27 +45,18 @@ def main():
     #seed = 125
     #graph_one = graph.Graph(graph_type=args.graph_type, cur_n=20, p=0.15,m=4, seed=seed)
 
-    # serial code
-    #for graph_ in range(args.graph_nbr):
-    #    seed = np.random.seed(120+graph_)
-    #    graph_dic[graph_]=graph.Graph(graph_type=args.graph_type, cur_n=args.node, p=args.p,m=args.m,seed=seed)
-
+    for g in range(args.ngames+1):
+        seed = np.random.seed(120+g)
+        graph_dic[g]=graph.Graph(graph_type=args.graph_type, cur_n=args.node, p=args.p,m=args.m,seed=seed)
 
     # graphList
     # agentList
-    graphList = []
     agentList = []
     envList = []
     print("batchSize:", args.batch)
     for i in range(args.batch):
-        graph_dic = dict()
-        for graph_ in range( (args.graph_nbr) // args.batch):
-            seed = np.random.seed(120+graph_)
-            graph_dic[graph_]=graph.Graph(graph_type=args.graph_type, cur_n=args.node, p=args.p,m=args.m,seed=seed)
-
-        graphList.append(graph_dic)
         agentList.append(agent.Agent(graph_dic, args.model, args.lr, args.batch, args.n_step)) 
-        envList.append(environment.Environment(graph_dic, args.environment_name, 2))
+        envList.append(environment.Environment(graph_dic, args.environment_name, 1))
 
     #logging.info('Loading agent...')
     #agent_class = agent.Agent(graph_dic, args.model, args.lr,args.bs,args.n_step)
@@ -78,7 +68,7 @@ def main():
         # my_runner = runner.BatchRunner(env_class, agent_class, args.batch, args.verbose)
         my_runner = runner.BatchRunner(envList, agentList, args.batch, args.verbose)
         # final_reward = my_runner.loop(args.ngames,args.epoch, args.niter)
-        final_reward = my_runner.loop( (args.ngames)//2 ,args.epoch, args.niter)
+        final_reward = my_runner.loop(args.ngames,args.epoch, args.niter)
         print("Obtained a final average reward of {}".format(final_reward))
         agent_class.save_model()
     else:

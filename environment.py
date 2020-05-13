@@ -19,7 +19,6 @@ class Environment:
         self.graph_init = self.graphs[self.games]
         self.nodes = self.graph_init.nodes()
         self.nbr_of_nodes = 0
-        self.edge_add_old = 0
         self.last_reward = 0
         self.observation = torch.zeros(1,self.nodes,1,dtype=torch.float)
 
@@ -42,29 +41,19 @@ class Environment:
             new_nbr_nodes=np.sum(observation[0].numpy())
 
             if new_nbr_nodes - self.nbr_of_nodes > 0:
-                reward = -1#np.round(-1.0/20.0,3)
+                reward = -1
             else:
                 reward = 0
 
             self.nbr_of_nodes=new_nbr_nodes
 
             #Minimum vertex set:
-
             done = True
-
-            edge_add = 0
 
             for edge in self.graph_init.edges():
                 if observation[:,edge[0],:]==0 and observation[:,edge[1],:]==0:
                     done=False
-                    # break
-                else:
-                    edge_add += 1
-
-            #reward = ((edge_add - self.edge_add_old) / np.max(
-            #   [1, self.graph_init.average_neighbor_degree([node])[node]]) - 10)/100
-
-            self.edge_add_old = edge_add
+                    break
 
             return (reward,done)
 
