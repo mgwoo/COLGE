@@ -31,6 +31,8 @@ class Runner:
             print(" -> epoch : "+str(epoch_))
             for g in range(1, games + 1):
                 print(" -> games : "+str(g))
+
+                # idk. Why 5? is it batchsize?
                 for epoch in range(5):
                     self.environment.reset(g)
                     self.agent.reset(g)
@@ -108,45 +110,43 @@ class BatchRunner:
         rewards = []
 
         envCnt = 0
-        print("len(env):", len(self.environments))
         for (agent, env) in zip(self.agents, self.environments):
             print(" -> env :", envCnt)
 
-            # idk, why 5???
-            for epoch in range(5):
-                env.reset(games)
-                agent.reset(games)
-                game_reward = 0
-                for i in range(1, max_iter+1):
-                    # The following is STEP
-                    observation = env.observe()
-                    action = agent.act(observation)
-                    (reward, stop) = env.act(action)
-                    agent.reward(observation, action, reward, stop)
-                
-                    # reward sum?
-                    game_reward += reward
-                    if stop :
-                        approx_sol =env.get_approx()
+            env.reset(games)
+            agent.reset(games)
+            game_reward = 0
+            for i in range(1, max_iter+1):
+                # The following is STEP
+                observation = env.observe()
+                action = agent.act(observation)
+                (reward, stop) = env.act(action)
+                agent.reward(observation, action, reward, stop)
+            
+                # reward sum?
+                game_reward += reward
+                if stop :
+                    # approx_sol =env.get_approx()
 
-                        #optimal solution
-                        optimal_sol = env.get_optimal_sol()
+                    #optimal solution
+                    optimal_sol = env.get_optimal_sol()
 
-                        # print cumulative reward of one play, it is actually the solution found by the NN algorithm
-                        print(" ->    Terminal event: cumulative rewards = {}".format(game_reward))
+                    # print cumulative reward of one play, it is actually the solution found by the NN algorithm
+                    print(" ->    Terminal event: game rewards = {}".format(game_reward))
 
-                        #print optimal solution
-                        print(" ->    Optimal solution = {}".format(optimal_sol))
+                    #print optimal solution
+                    print(" ->    Optimal solution = {}".format(optimal_sol))
+                    print(" ->    Ratio = %.3f" % (game_reward/optimal_sol))
 
-                        #we add in a list the solution found by the NN algorithm
-                        #list_cumul_reward.append(-cumul_reward)
+                    #we add in a list the solution found by the NN algorithm
+                    #list_cumul_reward.append(-cumul_reward)
 
-                        ##we add in a list the ratio between the NN solution and the optimal solution
-                        #list_optimal_ratio.append(cumul_reward/(optimal_sol))
+                    ##we add in a list the ratio between the NN solution and the optimal solution
+                    # list_optimal_ratio.append(game_reward/(optimal_sol))
 
-                        ##we add in a list the ratio between the NN solution and the baseline solution
-                        #list_aprox_ratio.append(cumul_reward/(approx_sol))
-                        break
+                    ##we add in a list the ratio between the NN solution and the baseline solution
+                    #list_aprox_ratio.append(cumul_reward/(approx_sol))
+                    break
             rewards.append(game_reward)
             envCnt += 1
         return sum(rewards)/len(rewards)
