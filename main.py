@@ -7,6 +7,7 @@ import logging
 import numpy as np
 import networkx as nx
 import sys
+import torch
 
 # # 2to3 compatibility
 # try:
@@ -45,20 +46,39 @@ def main():
     #seed = 125
     #graph_one = graph.Graph(graph_type=args.graph_type, cur_n=20, p=0.15,m=4, seed=seed)
 
-    for graph_ in range(args.graph_nbr):
-        seed = np.random.seed(120+graph_)
-        graph_dic[graph_]=graph.Graph(graph_type=args.graph_type, cur_n=args.node, p=args.p,m=args.m,seed=seed)
+    # serial code
+    #for graph_ in range(args.graph_nbr):
+    #    seed = np.random.seed(120+graph_)
+    #    graph_dic[graph_]=graph.Graph(graph_type=args.graph_type, cur_n=args.node, p=args.p,m=args.m,seed=seed)
 
-    logging.info('Loading agent...')
-    agent_class = agent.Agent(graph_dic, args.model, args.lr,args.bs,args.n_step)
 
-    logging.info('Loading environment %s' % args.environment_name)
-    env_class = environment.Environment(graph_dic,args.environment_name)
+    # graphList
+    # agentList
+    graphList = []
+    agentList = []
+    envList = []
+    print("batchSize:", args.batch)
+    for i in range(args.batch):
+        graph_dic = dict()
+        for graph_ in range( (args.graph_nbr) // args.batch):
+            seed = np.random.seed(120+graph_)
+            graph_dic[graph_]=graph.Graph(graph_type=args.graph_type, cur_n=args.node, p=args.p,m=args.m,seed=seed)
+
+        graphList.append(graph_dic)
+        agentList.append(agent.Agent(graph_dic, args.model, args.lr, args.batch, args.n_step)) 
+        envList.append(environment.Environment(graph_dic, args.environment_name, 2))
+
+    #logging.info('Loading agent...')
+    #agent_class = agent.Agent(graph_dic, args.model, args.lr,args.bs,args.n_step)
+    #logging.info('Loading environment %s' % args.environment_name)
+    #env_class = environment.Environment(graph_dic,args.environment_name, 1 )
 
     if args.batch is not None:
         print("Running a batched simulation with {} agents in parallel...".format(args.batch))
-        my_runner = runner.BatchRunner(env_class, agent_class, args.batch, args.verbose)
-        final_reward = my_runner.loop(args.ngames,args.epoch, args.niter)
+        # my_runner = runner.BatchRunner(env_class, agent_class, args.batch, args.verbose)
+        my_runner = runner.BatchRunner(envList, agentList, args.batch, args.verbose)
+        # final_reward = my_runner.loop(args.ngames,args.epoch, args.niter)
+        final_reward = my_runner.loop( (args.ngames)//2 ,args.epoch, args.niter)
         print("Obtained a final average reward of {}".format(final_reward))
         agent_class.save_model()
     else:

@@ -9,9 +9,10 @@ in which the agents are run.
 
 
 class Environment:
-    def __init__(self, graph,name):
+    def __init__(self, graph,name, num_threads):
         self.graphs = graph
         self.name= name
+        torch.set_num_threads(num_threads)
 
     def reset(self, g):
         self.games = g

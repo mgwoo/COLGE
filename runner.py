@@ -5,6 +5,7 @@ This is the machinnery that runs your agent in an environment.
 import matplotlib.pyplot as plt
 import numpy as np
 import agent
+import multiprocessing
 
 class Runner:
     def __init__(self, environment, agent, verbose=False):
@@ -103,28 +104,61 @@ class BatchRunner:
         self.verbose = verbose
         self.ended = [ False for _ in self.environments ]
 
-    def game(self, max_iter):
+    def game(self, max_iter, games):
         rewards = []
+
+        envCnt = 0
+        print("len(env):", len(self.environments))
         for (agent, env) in zip(self.agents, self.environments):
-            env.reset()
-            agent.reset()
-            game_reward = 0
-            for i in range(1, max_iter+1):
-                observation = env.observe()
-                action = agent.act(observation)
-                (reward, stop) = env.act(action)
-                agent.reward(observation, action, reward)
-                game_reward += reward
-                if stop :
-                    break
+            print(" -> env :", envCnt)
+
+            # idk, why 5???
+            for epoch in range(5):
+                env.reset(games)
+                agent.reset(games)
+                game_reward = 0
+                for i in range(1, max_iter+1):
+                    # The following is STEP
+                    observation = env.observe()
+                    action = agent.act(observation)
+                    (reward, stop) = env.act(action)
+                    agent.reward(observation, action, reward, stop)
+                
+                    # reward sum?
+                    game_reward += reward
+                    if stop :
+                        approx_sol =env.get_approx()
+
+                        #optimal solution
+                        optimal_sol = env.get_optimal_sol()
+
+                        # print cumulative reward of one play, it is actually the solution found by the NN algorithm
+                        print(" ->    Terminal event: cumulative rewards = {}".format(game_reward))
+
+                        #print optimal solution
+                        print(" ->    Optimal solution = {}".format(optimal_sol))
+
+                        #we add in a list the solution found by the NN algorithm
+                        #list_cumul_reward.append(-cumul_reward)
+
+                        ##we add in a list the ratio between the NN solution and the optimal solution
+                        #list_optimal_ratio.append(cumul_reward/(optimal_sol))
+
+                        ##we add in a list the ratio between the NN solution and the baseline solution
+                        #list_aprox_ratio.append(cumul_reward/(approx_sol))
+                        break
             rewards.append(game_reward)
+            envCnt += 1
         return sum(rewards)/len(rewards)
 
     def loop(self, games,nb_epoch, max_iter):
         cum_avg_reward = 0.0
         for epoch in range(nb_epoch):
+            print(" -> epoch : "+str(epoch))
             for g in range(1, games+1):
-                avg_reward = self.game(max_iter)
+                print(" -> games : "+str(g))
+                # avg_reward = self.game(max_iter, games)
+                avg_reward = self.game(max_iter, g)
                 cum_avg_reward += avg_reward
                 if self.verbose:
                     print("Simulation game {}:".format(g))
