@@ -4,6 +4,7 @@ import random
 #from gensim.models import Word2Vec
 import networkx as nx
 import numpy as np
+import stensor
 
 
 class S2V_QN_1(torch.nn.Module):
@@ -47,6 +48,9 @@ class S2V_QN_1(torch.nn.Module):
         minibatch_size = xv.shape[0]
         nbr_node = xv.shape[1]
         # print("adj shape:", adj.shape)
+        #print("nbr_mode:", nbr_node)
+        
+        # print( mu_pool )
 
         for t in range(self.T):
             if t == 0:
@@ -62,10 +66,35 @@ class S2V_QN_1(torch.nn.Module):
                 for i in range(self.len_pre_pooling):
                     mu = self.list_pre_pooling[i](mu).clamp(0)
 
-                # mu_pool = torch.matmul(adj, mu)
-                mu_pool = torch.stack([adj[i].mm(mu[i]) for i in range(minibatch_size)])
+                # mu_pool = torch.matmul(adj.to_dense(), mu)
+                # mu_pool = torch.sparse.mm(adj, mu)
+
+                #print( adj.shape, mu.shape )
+                #print( adj[0].mm(mu[0]) )
+
+                #torch.set_printoptions(profile="full")
+                #print( adj._indices() )
+                #print( adj._values() )
+                #exit()
+
+                mu_pool = stensor.sparse_matmul(adj, mu)
+
+                #exit()
+                # mu_pool is bottleneck
+                
+                #mu_pool = torch.zeros(minibatch_size, nbr_node, self.mu_1.shape[1], dtype=torch.float32)
+                #for i in range(minibatch_size):
+                #    mu_pool[i,:,:] = adj[i].mm(mu[i])
+
+                    # mu_pool[i,:,:] = torch.matmul(adj[i].to_dense(), mu[i])
+
+                # mu_pool = torch.stack([adj[i].mm(mu[i]) for i in range(minibatch_size)])
+
+                #print( mu_pool.shape )
+                #exit()
 
                 # after pooling
+                # print( "len_post_pooling:", self.len_post_pooling)
                 for i in range(self.len_post_pooling):
                     mu_pool = self.list_post_pooling[i](mu_pool).clamp(0)
 
