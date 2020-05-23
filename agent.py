@@ -51,10 +51,12 @@ class DQAgent:
         self.memory_n=[]
         self.minibatch_length = bs
 
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
         if self.model_name == 'S2V_QN_1':
 
             args_init = load_model_config()[self.model_name]
-            self.model = models.S2V_QN_1(**args_init)
+            self.model = models.S2V_QN_1(**args_init).cuda()
 
         elif self.model_name == 'S2V_QN_2':
             args_init = load_model_config()[self.model_name]
@@ -105,7 +107,7 @@ class DQAgent:
         self.adj = self.graphs[self.games].adj()
         self.adj = self.adj.todense()
         self.adj = torch.from_numpy(np.expand_dims(self.adj.astype(int), axis=0))
-        self.adj = self.adj.type(torch.FloatTensor)
+        self.adj = self.adj.type(torch.cuda.FloatTensor)
 
         self.last_action = 0
         self.last_observation = torch.zeros(1, self.nodes, 1, dtype=torch.float)
@@ -120,11 +122,11 @@ class DQAgent:
 
 
         if self.epsilon_ > np.random.rand():
-            return np.random.choice(np.where(observation.numpy()[0,:,0] == 0)[0])
+            return np.random.choice(np.where(observation.cpu().numpy()[0,:,0] == 0)[0])
         else:
             q_a = self.model(observation, self.adj)
-            q_a=q_a.detach().numpy()
-            return np.where((q_a[0, :, 0] == np.max(q_a[0, :, 0][observation.numpy()[0, :, 0] == 0])))[0][0]
+            q_a=q_a.detach().cpu().numpy()
+            return np.where((q_a[0, :, 0] == np.max(q_a[0, :, 0][observation.cpu().numpy()[0, :, 0] == 0])))[0][0]
 
     def reward(self, observation, action, reward,done):
 
@@ -169,22 +171,22 @@ class DQAgent:
         minibatch = random.sample(self.memory_n, self.minibatch_length - 1)
         minibatch.append(self.memory_n[-1])
         last_observation_tens = minibatch[0][0]
-        action_tens = torch.Tensor([minibatch[0][1]]).type(torch.LongTensor)
+        action_tens = torch.Tensor([minibatch[0][1]]).type(torch.cuda.LongTensor)
         reward_tens = torch.Tensor([[minibatch[0][2]]])
         observation_tens = minibatch[0][3]
         done_tens =torch.Tensor([[minibatch[0][4]]])
         adj_tens = self.graphs[minibatch[0][5]].adj().todense()
-        adj_tens = torch.from_numpy(np.expand_dims(adj_tens.astype(int), axis=0)).type(torch.FloatTensor)
+        adj_tens = torch.from_numpy(np.expand_dims(adj_tens.astype(int), axis=0)).type(torch.cuda.FloatTensor)
 
 
         for last_observation_, action_, reward_, observation_, done_, games_ in minibatch[-self.minibatch_length + 1:]:
             last_observation_tens=torch.cat((last_observation_tens,last_observation_))
-            action_tens = torch.cat((action_tens, torch.Tensor([action_]).type(torch.LongTensor)))
+            action_tens = torch.cat((action_tens, torch.Tensor([action_]).type(torch.cuda.LongTensor)))
             reward_tens = torch.cat((reward_tens, torch.Tensor([[reward_]])))
             observation_tens = torch.cat((observation_tens, observation_))
             done_tens = torch.cat((done_tens,torch.Tensor([[done_]])))
             adj_ = self.graphs[games_].adj().todense()
-            adj = torch.from_numpy(np.expand_dims(adj_.astype(int), axis=0)).type(torch.FloatTensor)
+            adj = torch.from_numpy(np.expand_dims(adj_.astype(int), axis=0)).type(torch.cuda.FloatTensor)
             adj_tens = torch.cat((adj_tens, adj))
 
         return (last_observation_tens, action_tens, reward_tens, observation_tens,done_tens, adj_tens)

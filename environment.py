@@ -38,7 +38,7 @@ class Environment:
 
         if self.name == "MVC":
 
-            new_nbr_nodes=np.sum(observation[0].numpy())
+            new_nbr_nodes=np.sum(observation[0].cpu().numpy())
 
             if new_nbr_nodes - self.nbr_of_nodes > 0:
                 reward = -1#np.round(-1.0/20.0,3)
